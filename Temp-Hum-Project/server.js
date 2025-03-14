@@ -50,30 +50,42 @@ mqttClient.on('connect', () => {
     mqttClient.subscribe("/work_group_01/room_temp/humidity");
 });
 
+// Store the temperature and humidity data
+let temperatureData = null;
+let humidityData = null;
+
 // Handle incoming MQTT messages and forward them to clients
 mqttClient.on('message', (topic, message) => {
     const messageStr = message.toString();
     console.log(`Received message from ${topic}: ${messageStr}`);
 
-    // Check which topic the message belongs to and insert it into the database
+    // Update the respective data based on the topic
     if (topic === "/work_group_01/room_temp/temperature") {
-        // Insert temperature data into the database
-        db.run(`INSERT INTO weather_data (temperature) VALUES (?)`, [messageStr], function(err) {
-            if (err) {
-                console.error('Error inserting temperature data:', err.message);
-            } else {
-                console.log('Inserted temperature data into weather_data');
-            }
-        });
+        temperatureData = messageStr;
+        if (humidityData !== null) {
+            // Insert both temperature and humidity into the database
+            db.run(`INSERT INTO weather_data (temperature, humidity) VALUES (?, ?)`, [temperatureData, humidityData], function(err) {
+                if (err) {
+                    console.error('Error inserting data into weather_data:', err.message);
+                } else {
+                    console.log('Inserted temperature and humidity data into weather_data');
+                }
+            });
+            humidityData = null; // Reset humidityData after inserting
+        }
     } else if (topic === "/work_group_01/room_temp/humidity") {
-        // Insert humidity data into the database
-        db.run(`INSERT INTO weather_data (humidity) VALUES (?)`, [messageStr], function(err) {
-            if (err) {
-                console.error('Error inserting humidity data:', err.message);
-            } else {
-                console.log('Inserted humidity data into weather_data');
-            }
-        });
+        humidityData = messageStr;
+        if (temperatureData !== null) {
+            // Insert both temperature and humidity into the database
+            db.run(`INSERT INTO weather_data (temperature, humidity) VALUES (?, ?)`, [temperatureData, humidityData], function(err) {
+                if (err) {
+                    console.error('Error inserting data into weather_data:', err.message);
+                } else {
+                    console.log('Inserted temperature and humidity data into weather_data');
+                }
+            });
+            temperatureData = null; // Reset temperatureData after inserting
+        }
     }
 });
 
